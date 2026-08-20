@@ -556,41 +556,107 @@ function renderTransactions(){
   }).join('');
 }
 
-async function importCSV(e,target){
-  const file = e.target.files[0]; if(!file) return;
-  Papa.parse(file,{
-    header:true,skipEmptyLines:true,
-    complete: async (res)=>{
-      let rows = [];
-      res.data.forEach(row=>{
-        const data = row.Data || row.data || row.date;
-        const prod = row.Produto || row.produto || row.product || row.Descricao;
-        const val = row.Valor || row.valor || row.value;
-        if(!data||!prod||!val) return;
-        const date = data.includes('/')?parseDate(data.trim()):data.trim();
-        const value = parseFloat(String(val).replace(',','.'));
-        rows.push({date, product:prod, value});
-      });
-      if(target==='transaction'){
-        const payload = rows.map(r=>({family_id:familyId,type:'expense',date:r.date,product:r.product,value:r.value,category_id:null}));
-        const {error} = await sb.from('transactions').insert(payload);
-        if(error) return alert('Erro: '+error.message);
-      } else if(target==='card'){
-        if(!appData.cards.length) return alert('Cadastre um cartão primeiro');
-        const cardId = prompt(`Para qual cartão?\n\n${appData.cards.map(c=>`• ${c.name} (ID: ${c.id})`).join('\n')}\n\nCole o ID do cartão:`);
-        const card = appData.cards.find(c=>c.id===cardId);
-        if(!card) return alert('Cartão não encontrado');
-        const payload = rows.map(r=>{
-          const d = new Date(r.date+'T00:00:00');
-          const invoiceMonth = getInvoiceMonth(d, card.closing_day);
-          return {card_id:card.id,family_id:familyId,date:r.date,product:r.product,value:r.value,invoice_month:invoiceMonth};
+async function importCSV(e, target) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  Papa.parse(file, {
+    header: true,
+    skipEmptyLines: true,
+    complete: async (res) => {
+      // Normaliza os nomes das colunas (remove espaços, minúsculas)
+      const normalizedData = res.data.map(row => {
+        const normalized = {};
+        Object.keys(row).forEach(key => {
+          const cleanKey = key.trim().toLowerCase().replace(/[àáâã]/g, 'a').replace(/[èéê]/g, 'e').replace(/[ìíî]/g, 'i').replace(/[òóôõ]/g, 'o').replace(/[ùúû]/g, 'u');
+          normalized[cleanKey] = row[key];
         });
-        const {error} = await sb.from('card_charges').insert(payload);
-        if(error) return alert('Erro: '+error.message);
+        return normalized;
+      });
+
+      // Processa as linhas com validação rigorosa
+      let rows = [];
+      let invalidRows = [];
+      
+      normalizedData.forEach((row, index) => {
+        // Tenta encontrar os campos com vários nomes possíveis
+        const data = row.data || row.date || row.datas;
+        const prod = row.produto || row.product || row.descricao || row.description || row.nome;
+        const val = row.valor || row.value || row.preco || row.price;
+
+        if (!data || !prod || !val) {
+          invalidRows.push({ index: index + 1, reason: 'Campos faltando' });
+          return;
+        }
+
+        // Parse da data
+        let date = data.trim();
+        if (date.includes('/')) {
+          const parts = date.split('/');
+          if (parts.length === 3) {
+            date = `${parts[2]}-${parts[1]}-${parts[0]}`;
+          }
+        }
+
+        // Parse do valor (trata formato brasileiro 1.234,56)
+        let valueStr = String(val).trim();
+        // Remove R$, espaços e pontos de milhar
+        valueStr = valueStr.replace(/R\$/g, '').replace(/\s/g, '').replace(/\./g, '').replace(',', '.');
+        const value = parseFloat(valueStr);
+
+        if (isNaN(value) || value <= 0) {
+          invalidRows.push({ index: index + 1, reason: `Valor inválido: "${val}"` });
+          return;
+        }
+
+        rows.push({ date, product: prod.trim(), value });
+      });
+
+      // Mostra aviso se houver linhas inválidas
+      if (invalidRows.length > 0) {
+        const reasons = invalidRows.slice(0, 5).map(r => `• Linha ${r.index}: ${r.reason}`).join('\n');
+        const more = invalidRows.length > 5 ? `\n... e mais ${invalidRows.length - 5} linhas` : '';
+        if (!confirm(`️ ${invalidRows.length} linha(s) ignorada(s):\n${reasons}${more}\n\nDeseja importar as ${rows.length} linhas válidas?`)) {
+          e.target.value = '';
+          return;
+        }
       }
-      alert(`${rows.length} registros importados!`);
-      e.target.value='';
-      await loadAllData();renderAll();
+
+      if (rows.length === 0) {
+        alert('Nenhum registro válido encontrado no CSV.');
+        e.target.value = '';
+        return;
+      }
+
+      if (target === 'transaction') {
+        const payload = rows.map(r => ({
+          family_id: familyId,
+          type: 'expense',
+          date: r.date,
+          product: r.product,
+          value: r.value,
+          category_id: null
+        }));
+        const { error } = await sb.from('transactions').insert(payload);
+        if (error) return alert('Erro ao importar: ' + error.message);
+        alert(`✅ ${rows.length} transações importadas com sucesso!`);
+        e.target.value = '';
+        await loadAllData();
+        renderAll();
+
+      } else if (target === 'card') {
+        if (!appData.cards.length) {
+          alert('Cadastre pelo menos um cartão antes de importar.');
+          e.target.value = '';
+          return;
+        }
+        window._pendingCardRows = rows;
+        openCardSelectionModal();
+      }
+    },
+    error: (err) => {
+      alert('Erro ao ler o arquivo: ' + err.message);
+      e.target.value = '';
     }
   });
 }
