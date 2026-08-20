@@ -349,13 +349,50 @@ const INVESTMENT_TYPES = [
 
 // ===== CATEGORIZAÇÃO INTELIGENTE =====
 const CATEGORY_KEYWORDS = {
-  alimentacao: ['mercado','supermercado','padaria','açougue','acougue','hortifruti','feira','restaurante','lanchonete','ifood','rappi','pizza','burger','mcdonald','burger king','pizza hut','dominos','coco bambu','outback','giraffas','bob\'s','habib\'s','bar'],
-  transporte: ['uber','99','cabify','gasolina','posto','shell','ipiranga','estacionamento','rotas','pedagio','pedágio','taxi','táxi','metrô','onibus','ônibus','waze'],
-  moradia: ['aluguel','condominio','condomínio','luz','energia','cpfl','cemig','light','agua','água','sabesp','copasa','internet','net','claro','oi','vivo','telefone','celular','tim','iptu'],
-  saude: ['farmacia','farmácia','drogasil','raia','pague menos','hospital','clinica','clínica','medico','médico','dentista','laboratorio','laboratório','exame','consulta','unimed','amil','sulamerica'],
-  lazer: ['netflix','spotify','disney','hbo','prime','cinema','teatro','show','parque','viagem','hotel','airbnb','booking','centauro','decathlon','amazon','magalu','magazine luiza','casas bahia','americanas','shopee','mercado livre','mercadolivre','steam','playstation','xbox'],
-  educacao: ['escola','faculdade','universidade','curso','udemy','alura','coursera','livro','kindle','material escolar'],
-  servicos: ['salao','salão','barbearia','estetica','estética','manicure','pedicure','lavanderia','limpeza','mecanico','mecânico','oficina','seguro','contador','advogado','academia','smartfit']
+  alimentacao: [
+    'supermercado','mercado','padaria','açougue','acougue','hortifruti','feira',
+    'restaurante','lanchonete','ifood','rappi','pizza','burger','mcdonald',
+    'burger king','pizza hut','dominos','coco bambu','outback','giraffas',
+    'bob\'s','habib\'s','bar','atacadao','atacadão','produtor','carnes',
+    'legumes','picole','picolé','sorvete','acai','açaí','pao','pão','doces',
+    'fontenelli','skina','mabi','cine show','banana raiz','tiago legumes',
+    'cachopa','rayane','jose ivan','marcelo rangel','silmar','josepedro',
+    'wesley','adeilton','katiapassa','ricardoqueiroz'
+  ],
+  transporte: [
+    'uber','99','cabify','gasolina','posto','shell','ipiranga','estacionamento',
+    'rotas','pedagio','pedágio','taxi','táxi','metrô','onibus','ônibus','waze',
+    'localiza','aluguel','rac','autoposto','cruzeiro centracruzeiro'
+  ],
+  moradia: [
+    'aluguel','condominio','condomínio','luz','energia','cpfl','cemig','light',
+    'agua','água','sabesp','copasa','internet','net','claro','oi','vivo',
+    'telefone','celular','tim','iptu','velloz net'
+  ],
+  saude: [
+    'farmacia','farmácia','drogasil','raia','pague menos','hospital','clinica',
+    'clínica','medico','médico','dentista','laboratorio','laboratório','exame',
+    'consulta','unimed','amil','sulamerica','farmaconde','mp*drabarbarataubatebr'
+  ],
+  lazer: [
+    'netflix','spotify','disney','hbo','prime','cinema','teatro','show','parque',
+    'viagem','hotel','airbnb','booking','centauro','decathlon','amazon','magalu',
+    'magazine luiza','casas bahia','americanas','shopee','mercado livre',
+    'mercadolivre','steam','playstation','xbox','nintendo','apple.com','apple',
+    'dufry','shopping','hteacher','icaro racoes'
+  ],
+  educacao: [
+    'escola','faculdade','universidade','curso','udemy','alura','coursera','livro',
+    'kindle','material escolar'
+  ],
+  servicos: [
+    'salao','salão','barbearia','estetica','estética','manicure','pedicure',
+    'lavanderia','limpeza','mecanico','mecânico','oficina','seguro','contador',
+    'advogado','academia','smartfit','izope auto pecas','mcb distribuidora',
+    'central embalagens','comercial sao vicente','banana raiz','loja do abencoado',
+    'bb solucoes','mafranco','hotelarujaltda','marcelo rangel','pix mercado pago',
+    'pdv*cancao nova','cancao nova','distribuidora jf'
+  ]
 };
 
 function suggestCategory(productName) {
