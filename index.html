@@ -99,12 +99,15 @@ tr:hover{background:#f8fafc}
 .invite-code{font-family:monospace;font-size:24px;font-weight:700;color:var(--primary);letter-spacing:4px;margin:8px 0}
 .loader{display:inline-block;width:16px;height:16px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+
+/* ===== CARD DETAIL VIEW & BULK ACTIONS ===== */
 .card-detail-overlay{display:none;position:fixed;inset:0;background:var(--bg);z-index:200;overflow-y:auto}
 .card-detail-overlay.active{display:block;animation:fade .3s}
 .card-detail-header{background:var(--surface);border-bottom:1px solid var(--border);padding:16px 24px;position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
 .card-detail-header .back-btn{background:none;border:none;font-size:18px;cursor:pointer;color:var(--primary);padding:8px}
 .card-detail-header .card-title{font-size:18px;font-weight:700;flex:1}
-.card-detail-body{padding:24px;max-width:1200px;margin:0 auto}
+.card-detail-body{padding:24px;max-width:1200px;margin:0 auto;padding-bottom:100px}
+
 .invoice-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:24px;box-shadow:var(--shadow)}
 .invoice-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px}
 .invoice-title{font-size:18px;font-weight:700}
@@ -117,6 +120,7 @@ tr:hover{background:#f8fafc}
 .invoice-stat.paid{background:#d1fae5;color:#065f46}
 .invoice-stat.pending{background:#fef3c7;color:#92400e}
 .invoice-stat.limit{background:#f1f5f9;color:var(--text)}
+
 .category-breakdown{margin:16px 0;padding:16px;background:#f8fafc;border-radius:8px}
 .category-breakdown-title{font-size:14px;font-weight:600;margin-bottom:12px;color:var(--text)}
 .cat-row{display:grid;grid-template-columns:1fr auto auto auto;gap:16px;padding:10px 0;border-bottom:1px solid var(--border);align-items:center;font-size:14px}
@@ -126,10 +130,12 @@ tr:hover{background:#f8fafc}
 .cat-row .cat-total{font-weight:600;text-align:right}
 .cat-row .cat-paid{color:var(--success);text-align:right}
 .cat-row .cat-pending{color:var(--warning);text-align:right}
+
 .charge-list{border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-top:16px}
-.charge-header{display:grid;grid-template-columns:auto 1fr auto auto auto auto;gap:12px;padding:10px 12px;background:#f8fafc;font-size:11px;color:var(--muted);text-transform:uppercase;font-weight:600;border-bottom:1px solid var(--border)}
-.charge-item{display:grid;grid-template-columns:auto 1fr auto auto auto auto;gap:12px;align-items:center;padding:12px;border-bottom:1px solid var(--border);transition:.2s}
+.charge-header{display:grid;grid-template-columns:40px auto 1fr auto auto auto auto;gap:12px;padding:10px 12px;background:#f8fafc;font-size:11px;color:var(--muted);text-transform:uppercase;font-weight:600;border-bottom:1px solid var(--border);align-items:center}
+.charge-item{display:grid;grid-template-columns:40px auto 1fr auto auto auto auto;gap:12px;align-items:center;padding:12px;border-bottom:1px solid var(--border);transition:.2s}
 .charge-item:hover{background:#f8fafc}
+.charge-item.selected{background:#e0e7ff}
 .charge-item.paid{opacity:.6}
 .charge-item.paid .charge-product{text-decoration:line-through;color:var(--muted)}
 .charge-date{font-size:12px;color:var(--muted);min-width:70px}
@@ -138,15 +144,29 @@ tr:hover{background:#f8fafc}
 .charge-category select{padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--surface);cursor:pointer;max-width:140px}
 .paid-toggle{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:var(--muted)}
 .paid-toggle input{cursor:pointer}
+
+/* Bulk Action Bar */
+.bulk-action-bar{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+  background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:12px 20px;box-shadow:0 10px 40px rgba(0,0,0,0.15);z-index:300;
+  display:none;align-items:center;gap:12px;
+  animation:slideUp 0.3s ease-out;
+}
+@keyframes slideUp{from{transform:translate(-50%, 100%);opacity:0}to{transform:translate(-50%, 0);opacity:1}}
+.bulk-action-bar .count{font-weight:700;color:var(--primary);margin-right:8px;font-size:14px}
+
 @media(max-width:768px){
   .sidebar{transform:translateX(-100%);transition:.3s}
   .sidebar.open{transform:translateX(0)}
   .main{margin-left:0;width:100%;padding:16px}
   .toggle-btn{display:block}
   .card-value{font-size:20px}
-  .charge-header,.charge-item{grid-template-columns:1fr;gap:6px}
+  .charge-header,.charge-item{grid-template-columns:40px 1fr;gap:6px}
+  .charge-header > div:nth-child(n+3), .charge-item > div:nth-child(n+3){grid-column:1/-1}
   .cat-row{grid-template-columns:1fr;gap:4px}
   .cat-row .cat-total,.cat-row .cat-paid,.cat-row .cat-pending{text-align:left}
+  .bulk-action-bar{width:90%;flex-wrap:wrap;justify-content:center}
 }
 .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:99}
 .overlay.active{display:block}
@@ -298,12 +318,22 @@ tr:hover{background:#f8fafc}
   </div>
 </div>
 
+<!-- ===== CARD DETAIL VIEW ===== -->
 <div class="card-detail-overlay" id="cardDetailOverlay">
   <div class="card-detail-header">
     <button class="back-btn" onclick="closeCardDetail()"><i class="fas fa-arrow-left"></i> Voltar</button>
     <div class="card-title" id="cardDetailTitle">Cartao</div>
   </div>
   <div class="card-detail-body" id="cardDetailBody"></div>
+</div>
+
+<!-- ===== BULK ACTION BAR ===== -->
+<div class="bulk-action-bar" id="bulkActionBar">
+  <span class="count" id="selectedCount">0 selecionados</span>
+  <button class="btn btn-sm btn-success" onclick="bulkMarkAsPaid()"><i class="fas fa-check"></i> Pago</button>
+  <button class="btn btn-sm btn-secondary" onclick="showBulkCategoryModal()"><i class="fas fa-tags"></i> Categoria</button>
+  <button class="btn btn-sm btn-danger" onclick="bulkDelete()"><i class="fas fa-trash"></i> Excluir</button>
+  <button class="btn btn-sm btn-secondary" onclick="clearSelection()"><i class="fas fa-times"></i> Cancelar</button>
 </div>
 
 <div class="modal" id="modal">
@@ -315,12 +345,14 @@ tr:hover{background:#f8fafc}
 
 <script>
 const SUPABASE_URL = 'https://huzlffbncffiynspmofa.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh1emxmZmJuY2ZmaXluc3Btb2ZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcxNTc1ODAsImV4cCI6MjEwMjczMzU4MH0.BMJnCtWuIWwys1T9PNyV8c-5NOM1lqyeY8se0BbmQUA';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh1emxmZmJuY2ZmaXluc3Btb2ZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcxNTc1ODAsImV4cCI6MjEwMjczMzU4MH0.BMJnCtWuIWwys1T9PNyV8c-5NOM1lqyeY8se0BbmQUA
+';
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let session = null, profile = null, familyData = null, familyId = null;
 let currentDetailCardId = null;
+let selectedChargeIds = new Set(); // NOVO: Estado para selecao em lote
 let appData = {transactions:[],accounts:[],cards:[],cardCharges:[],investments:[],categories:[],members:[]};
 let chartMonthly, chartCategories;
 
@@ -336,7 +368,6 @@ const INVESTMENT_TYPES = [
   {id:'outro',name:'Outro',rate:0,period:'variavel'}
 ];
 
-// CATEGORIZACAO INTELIGENTE (Compactada para evitar erros de sintaxe)
 const CATEGORY_KEYWORDS = {
   alimentacao: ['supermercado','mercado','padaria','acougue','hortifruti','feira','restaurante','lanchonete','ifood','rappi','pizza','burger','mcdonald','burger king','pizza hut','dominos','coco bambu','outback','giraffas','bobs','habibs','bar','atacadao','produtor','carnes','legumes','picole','sorvete','acai','pao','doces','fontenelli','skina','mabi','cine show','banana raiz','tiago legumes','cachopa','rayane','jose ivan','marcelo rangel','silmar','josepedro','wesley','adeilton','katiapassa','ricardoqueiroz','mercadolivre'],
   transporte: ['uber','99','cabify','gasolina','posto','shell','ipiranga','estacionamento','rotas','pedagio','taxi','metro','onibus','waze','localiza','aluguel','rac','autoposto','cruzeiro centracruzeiro','shellbox'],
@@ -438,27 +469,16 @@ async function initApp(){
     const {data:{session:s}} = await sb.auth.getSession();
     if(!s) return;
     session = s;
-    
     const {data:p, error} = await sb.from('profiles').select('*').eq('id', s.user.id).single();
-    if(error || !p || !p.family_id){
-      await sb.auth.signOut();
-      return showAuthMsg('Perfil nao encontrado. Entre novamente.');
-    }
-    
+    if(error || !p || !p.family_id){await sb.auth.signOut();return showAuthMsg('Perfil nao encontrado. Entre novamente.');}
     profile = p; familyId = p.family_id;
-    
     const {data:f, error:famError} = await sb.from('families').select('name, invite_code').eq('id', familyId).single();
-    if(famError || !f){
-      await sb.auth.signOut();
-      return showAuthMsg('Familia nao encontrada.');
-    }
-    
+    if(famError || !f){await sb.auth.signOut();return showAuthMsg('Familia nao encontrada.');}
     familyData = f;
     document.getElementById('currentUser').textContent = p.name;
     document.getElementById('familyBadge').innerHTML = '<strong>'+f.name+'</strong><span>Codigo: '+f.invite_code.toUpperCase()+'</span>';
     document.getElementById('authScreen').style.display = 'none';
     document.getElementById('app').style.display = 'block';
-    
     await loadAllData();
     renderAll();
   } catch(err) {
@@ -502,6 +522,104 @@ document.querySelectorAll('.nav-item').forEach(item=>{
 function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('overlay').classList.toggle('active')}
 function openModal(title,body){document.getElementById('modalTitle').textContent=title;document.getElementById('modalBody').innerHTML=body;document.getElementById('modal').classList.add('active')}
 function closeModal(){document.getElementById('modal').classList.remove('active')}
+
+// ===== BULK ACTIONS =====
+function toggleSelectCharge(id) {
+  if (selectedChargeIds.has(id)) selectedChargeIds.delete(id);
+  else selectedChargeIds.add(id);
+  updateBulkActionBar();
+  // Update row styling
+  const row = document.querySelector(`input[data-id="${id}"]`).closest('.charge-item');
+  if (selectedChargeIds.has(id)) row.classList.add('selected');
+  else row.classList.remove('selected');
+}
+
+function toggleSelectAll(checked, checkboxEl) {
+  const section = checkboxEl.closest('.invoice-section');
+  const checkboxes = section.querySelectorAll('.charge-item input[type="checkbox"]');
+  checkboxes.forEach(cb => {
+    cb.checked = checked;
+    const id = cb.getAttribute('data-id');
+    if (checked) {
+      selectedChargeIds.add(id);
+      cb.closest('.charge-item').classList.add('selected');
+    } else {
+      selectedChargeIds.delete(id);
+      cb.closest('.charge-item').classList.remove('selected');
+    }
+  });
+  updateBulkActionBar();
+}
+
+function updateBulkActionBar() {
+  const bar = document.getElementById('bulkActionBar');
+  const count = document.getElementById('selectedCount');
+  if (selectedChargeIds.size > 0) {
+    bar.style.display = 'flex';
+    count.textContent = selectedChargeIds.size + ' selecionado(s)';
+  } else {
+    bar.style.display = 'none';
+  }
+}
+
+function clearSelection() {
+  selectedChargeIds.clear();
+  document.querySelectorAll('.charge-item input[type="checkbox"]').forEach(cb => {
+    cb.checked = false;
+    cb.closest('.charge-item').classList.remove('selected');
+  });
+  document.querySelectorAll('.charge-header input[type="checkbox"]').forEach(cb => cb.checked = false);
+  updateBulkActionBar();
+}
+
+async function bulkMarkAsPaid() {
+  if (!confirm('Marcar ' + selectedChargeIds.size + ' itens como pagos?')) return;
+  const ids = Array.from(selectedChargeIds);
+  const { error } = await sb.from('card_charges').update({ paid: true, paid_date: new Date().toISOString().slice(0,10) }).in('id', ids);
+  if (error) return alert('Erro: ' + error.message);
+  clearSelection();
+  await loadAllData();
+  renderCardDetail();
+  renderCards();
+}
+
+async function bulkDelete() {
+  if (!confirm('Excluir ' + selectedChargeIds.size + ' itens permanentemente?')) return;
+  const ids = Array.from(selectedChargeIds);
+  const { error } = await sb.from('card_charges').delete().in('id', ids);
+  if (error) return alert('Erro: ' + error.message);
+  clearSelection();
+  await loadAllData();
+  renderCardDetail();
+  renderCards();
+}
+
+function showBulkCategoryModal() {
+  const catOpts = appData.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  openModal('Alterar Categoria em Lote', `
+    <p style="margin-bottom:16px;color:var(--muted)">Selecione a nova categoria para <strong>${selectedChargeIds.size}</strong> itens:</p>
+    <div class="form-group">
+      <label>Categoria</label>
+      <select class="form-control" id="bulkCategorySelect">
+        <option value="null">Sem categoria</option>
+        ${catOpts}
+      </select>
+    </div>
+    <button class="btn btn-primary" style="width:100%" onclick="executeBulkCategoryChange()">Aplicar</button>
+  `);
+}
+
+async function executeBulkCategoryChange() {
+  const newCatId = document.getElementById('bulkCategorySelect').value;
+  const finalCatId = newCatId === 'null' ? null : newCatId;
+  const ids = Array.from(selectedChargeIds);
+  const { error } = await sb.from('card_charges').update({ category_id: finalCatId }).in('id', ids);
+  if (error) return alert('Erro: ' + error.message);
+  closeModal();
+  clearSelection();
+  await loadAllData();
+  renderCardDetail();
+}
 
 async function importCSV(e, target) {
   const file = e.target.files[0];
@@ -561,7 +679,6 @@ function openCardAndInvoiceSelectionModal() {
     const invoicesList = existingInvoices.map(inv => '<option value="'+inv+'">'+fmtMonthLong(inv)+' (Venc. '+c.due_day+')</option>').join('');
     const now = new Date();
     const nextPeriod = new Date(now.getFullYear(), now.getMonth()+1, 1).toISOString().slice(0,7);
-    
     return '<div style="padding:14px;border:1px solid var(--border);border-radius:8px;margin-bottom:10px;background:white">'+
       '<div style="font-weight:600;margin-bottom:8px"><i class="fas fa-credit-card" style="color:var(--primary);margin-right:8px"></i>'+c.name+' <span style="font-size:12px;color:var(--muted);font-weight:400"> '+c.brand+' '+c.last_digits+'</span></div>'+
       '<div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end">'+
@@ -572,7 +689,6 @@ function openCardAndInvoiceSelectionModal() {
         '<button class="btn btn-primary" onclick="selectCardAndInvoice(\''+c.id+'\')"><i class="fas fa-upload"></i> Importar</button>'+
       '</div></div>';
   }).join('');
-  
   openModal('Importar CSV - Escolha o Cartao e a Fatura', 
     '<div class="alert alert-info" style="margin-bottom:16px"><i class="fas fa-info-circle"></i> '+window._pendingCardRows.length+' registros encontrados.</div>'+
     cardsHtml+
@@ -607,6 +723,7 @@ function cancelCardImport() {
 
 function openCardDetailView(cardId) {
   currentDetailCardId = cardId;
+  clearSelection(); // Limpa selecoes anteriores
   const card = appData.cards.find(c=>c.id===cardId);
   if (!card) return;
   document.getElementById('cardDetailTitle').innerHTML = '<i class="fas fa-credit-card" style="color:var(--primary);margin-right:8px"></i>'+card.name+' <span style="font-size:13px;color:var(--muted);font-weight:400"> '+card.brand+' '+card.last_digits+' Venc. dia '+card.due_day+'</span>';
@@ -617,6 +734,7 @@ function openCardDetailView(cardId) {
 function closeCardDetail() {
   document.getElementById('cardDetailOverlay').classList.remove('active');
   currentDetailCardId = null;
+  clearSelection();
 }
 
 async function updateChargeField(chargeId, field, value) {
@@ -690,11 +808,15 @@ function renderCardDetail() {
         '<div class="cat-row"><div class="cat-name"><span class="cat-dot" style="background:'+data.color+'"></span>'+name+'</div><div class="cat-total">'+fmt(data.total)+'</div><div class="cat-paid">'+fmt(data.paid)+'</div><div class="cat-pending">'+fmt(data.pending)+'</div></div>'
       ).join('') + '</div>'+
       '<div style="font-size:14px;font-weight:600;margin:20px 0 12px;color:var(--text)"><i class="fas fa-list" style="color:var(--primary);margin-right:6px"></i>Compras desta Fatura ('+items.length+')</div>'+
-      '<div class="charge-list"><div class="charge-header"><div>Data</div><div>Produto</div><div>Categoria</div><div style="text-align:right">Valor</div><div style="text-align:center">Status</div><div></div></div>'+
+      '<div class="charge-list"><div class="charge-header">'+
+        '<div style="text-align:center"><input type="checkbox" onchange="toggleSelectAll(this.checked, this)"></div>'+
+        '<div>Data</div><div>Produto</div><div>Categoria</div><div style="text-align:right">Valor</div><div style="text-align:center">Status</div><div></div></div>'+
       items.sort((a,b)=>a.date.localeCompare(b.date)).map(i => {
         const cat = appData.categories.find(c=>c.id===i.category_id);
         const catOpts = appData.categories.map(c=>'<option value="'+c.id+'" '+(c.id===i.category_id?'selected':'')+'>'+c.name+'</option>').join('');
-        return '<div class="charge-item '+(i.paid?'paid':'')+'">'+
+        const isSelected = selectedChargeIds.has(i.id);
+        return '<div class="charge-item '+(i.paid?'paid':'')+' '+(isSelected?'selected':'')+'">'+
+          '<div style="text-align:center"><input type="checkbox" data-id="'+i.id+'" '+(isSelected?'checked':'')+' onchange="toggleSelectCharge(\''+i.id+'\')"></div>'+
           '<div class="charge-date">'+fmtDate(i.date)+'</div><div class="charge-product">'+i.product+'</div>'+
           '<div class="charge-category"><select onchange="updateChargeField(\''+i.id+'\',\'category_id\',this.value===\'null\'?null:this.value)"><option value="null">--</option>'+catOpts+'</select></div>'+
           '<div class="charge-value">'+fmt(i.value)+'</div>'+
@@ -703,6 +825,7 @@ function renderCardDetail() {
       }).join('') + '</div></div>';
   });
   body.innerHTML = html;
+  updateBulkActionBar();
 }
 
 function openTransactionModal(id){
