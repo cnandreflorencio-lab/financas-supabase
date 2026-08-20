@@ -486,21 +486,79 @@ async function handleLogout(){
 }
 
 async function initApp(){
-  const {data:{session:s}} = await sb.auth.getSession();
-  if(!s) return;
-  session = s;
-  const {data:p, error} = await sb.from('profiles').select('*').eq('id', s.user.id).single();
-  if(error || !p || !p.family_id){await sb.auth.signOut();return showAuthMsg('Perfil não encontrado.')}
-  profile = p; familyId = p.family_id;
-  const {data:f, error:famError} = await sb.from('families').select('name, invite_code').eq('id', familyId).single();
-  if(famError || !f){await sb.auth.signOut();return showAuthMsg('Família não encontrada.')}
-  familyData = f;
-  document.getElementById('currentUser').textContent = p.name;
-  document.getElementById('familyBadge').innerHTML = `<strong>${f.name}</strong><span>Código: ${f.invite_code.toUpperCase()}</span>`;
-  document.getElementById('authScreen').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-  await loadAllData();
-  renderAll();
+  console.log('🔄 Iniciando app...');
+  
+  try {
+    const {data:{session:s}} = await sb.auth.getSession();
+    console.log('📋 Sessão:', s ? 'OK' : 'NULA');
+    
+    if(!s) {
+      console.warn('⚠️ Sem sessão, voltando para login');
+      return;
+    }
+    session = s;
+    
+    // Busca perfil
+    console.log(' Buscando perfil do usuário:', s.user.id);
+    const {data:p, error} = await sb.from('profiles').select('*').eq('id', s.user.id).single();
+    
+    if(error) {
+      console.error(' Erro ao buscar perfil:', error);
+      showAuthMsg('Erro ao carregar perfil: ' + error.message);
+      return;
+    }
+    
+    if(!p) {
+      console.error('❌ Perfil não encontrado');
+      showAuthMsg('Perfil não encontrado. Contate o administrador.');
+      return;
+    }
+    
+    if(!p.family_id) {
+      console.error('❌ Perfil sem família');
+      showAuthMsg('Sua conta não está vinculada a uma família.');
+      return;
+    }
+    
+    profile = p; 
+    familyId = p.family_id;
+    console.log('✅ Perfil carregado:', p.name, '| Família:', familyId);
+    
+    // Busca família
+    console.log('👨‍👩‍👧 Buscando família:', familyId);
+    const {data:f, error:famError} = await sb.from('families').select('name, invite_code').eq('id', familyId).single();
+    
+    if(famError) {
+      console.error('❌ Erro ao buscar família:', famError);
+      showAuthMsg('Erro ao carregar família: ' + famError.message);
+      return;
+    }
+    
+    if(!f) {
+      console.error('❌ Família não encontrada');
+      showAuthMsg('Família não encontrada.');
+      return;
+    }
+    
+    familyData = f;
+    console.log('✅ Família carregada:', f.name);
+    
+    // SÓ AGORA esconde login e mostra app
+    document.getElementById('currentUser').textContent = p.name;
+    document.getElementById('familyBadge').innerHTML = `<strong>${f.name}</strong><span>Código: ${f.invite_code.toUpperCase()}</span>`;
+    document.getElementById('authScreen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    
+    console.log('📊 Carregando dados...');
+    await loadAllData();
+    console.log('🎨 Renderizando...');
+    renderAll();
+    console.log('✅ App iniciado com sucesso!');
+    
+  } catch(err) {
+    console.error(' Erro fatal no initApp:', err);
+    showAuthMsg('Erro inesperado: ' + err.message);
+  }
 }
 
 async function loadAllData(){
@@ -1343,9 +1401,24 @@ function renderAll(){
   catFilter.innerHTML = '<option value="">Todas categorias</option>'+appData.categories.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
 }
 
+// Startup robusto
 (async()=>{
-  const {data:{session:s}} = await sb.auth.getSession();
-  if(s) await initApp();
+  console.log('🚀 Iniciando Finanças Familiares...');
+  try {
+    const {data:{session:s}} = await sb.auth.getSession();
+    console.log(' Sessão encontrada:', s ? 'SIM' : 'NÃO');
+    if(s) {
+      await initApp();
+    } else {
+      console.log('👋 Nenhum usuário logado, mostrando tela de login');
+      document.getElementById('authScreen').style.display = 'flex';
+      document.getElementById('app').style.display = 'none';
+    }
+  } catch(err) {
+    console.error('💥 Erro no startup:', err);
+    document.getElementById('authScreen').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+  }
 })();
 </script>
 </body>
