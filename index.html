@@ -541,7 +541,6 @@ function toggleSidebar(){document.getElementById('sidebar').classList.toggle('op
 function openModal(title,body){document.getElementById('modalTitle').textContent=title;document.getElementById('modalBody').innerHTML=body;document.getElementById('modal').classList.add('active');}
 function closeModal(){document.getElementById('modal').classList.remove('active');}
 
-// ===== CONSOLIDATED VIEW =====
 function openConsolidatedView() {
   document.getElementById('consolidatedOverlay').classList.add('active');
   renderConsolidatedSelector();
@@ -628,7 +627,6 @@ function updateConsolidatedResults() {
   `;
 }
 
-// ===== BULK ACTIONS (COM CORRECAO DE UUID NULL) =====
 function toggleSelectCharge(id) {
   if (selectedChargeIds.has(id)) selectedChargeIds.delete(id);
   else selectedChargeIds.add(id);
@@ -678,7 +676,7 @@ function clearSelection() {
 
 async function bulkMarkAsPaid() {
   const validIds = Array.from(selectedChargeIds).filter(id => typeof id === 'string' && id.length > 10 && id !== 'null' && id !== 'undefined');
-  if (validIds.length === 0) { clearSelection(); return alert('Nenhum item válido selecionado.'); }
+  if (validIds.length === 0) { clearSelection(); return alert('Nenhum item valido selecionado.'); }
   if (!confirm('Marcar ' + validIds.length + ' itens como pagos?')) return;
   
   const { error } = await sb.from('card_charges').update({ paid: true, paid_date: new Date().toISOString().slice(0,10) }).in('id', validIds);
@@ -688,12 +686,11 @@ async function bulkMarkAsPaid() {
 }
 
 async function bulkDelete() {
-  // FILTRO CRITICO: Remove qualquer valor que não seja um UUID válido (evita o erro "null")
   const validIds = Array.from(selectedChargeIds).filter(id => typeof id === 'string' && id.length > 10 && id !== 'null' && id !== 'undefined');
   
   if (validIds.length === 0) {
     clearSelection();
-    return alert('Nenhum item válido selecionado para exclusão.');
+    return alert('Nenhum item valido selecionado para exclusao.');
   }
   if (!confirm('Excluir ' + validIds.length + ' itens permanentemente?')) return;
 
@@ -708,7 +705,7 @@ async function bulkDelete() {
 
 function showBulkCategoryModal() {
   const validIds = Array.from(selectedChargeIds).filter(id => typeof id === 'string' && id.length > 10 && id !== 'null' && id !== 'undefined');
-  if (validIds.length === 0) { clearSelection(); return alert('Nenhum item válido selecionado.'); }
+  if (validIds.length === 0) { clearSelection(); return alert('Nenhum item valido selecionado.'); }
   
   const catOpts = appData.categories.map(c => '<option value="'+c.id+'">'+c.name+'</option>').join('');
   openModal('Alterar Categoria em Lote', 
@@ -731,7 +728,6 @@ async function executeBulkCategoryChange() {
   renderCardDetail();
 }
 
-// ===== CSV IMPORT COM DETECCAO DE DUPLICATAS =====
 async function importCSV(e, target) {
   const file = e.target.files[0];
   if (!file) return;
@@ -813,7 +809,6 @@ async function selectCardAndInvoice(cardId) {
   const invoicePeriod = document.getElementById('invoice-select-' + cardId).value;
   const rows = window._pendingCardRows;
 
-  // 1. Separar novos e duplicatas
   const newItems = [];
   const duplicates = [];
 
@@ -852,7 +847,7 @@ function showDuplicateResolutionModal(card, invoicePeriod, newItems, duplicates,
     <div style="margin-bottom:16px;max-height:150px;overflow-y:auto;padding:10px;background:#f8fafc;border-radius:8px;border:1px solid var(--border)">
       ${dupListHtml}
     </div>
-    <p style="font-size:14px;margin-bottom:16px">Os <strong>${newItems.length}</strong> itens novos serão importados de qualquer forma. Como deseja proceder com as duplicatas?</p>
+    <p style="font-size:14px;margin-bottom:16px">Os <strong>${newItems.length}</strong> itens novos serao importados de qualquer forma. Como deseja proceder com as duplicatas?</p>
     <div style="display:grid;gap:8px">
       <button class="btn btn-secondary" onclick="resolveDuplicates('ignore')">
         <i class="fas fa-ban"></i> Ignorar Duplicatas (Recomendado)
@@ -863,7 +858,7 @@ function showDuplicateResolutionModal(card, invoicePeriod, newItems, duplicates,
       <button class="btn btn-danger" onclick="resolveDuplicates('duplicate')">
         <i class="fas fa-copy"></i> Importar Tudo (Gerar Duplicidade)
       </button>
-      <button class="btn btn-sm" style="margin-top:8px;background:transparent;border:1px solid var(--border)" onclick="cancelImport()">Cancelar Importação</button>
+      <button class="btn btn-sm" style="margin-top:8px;background:transparent;border:1px solid var(--border)" onclick="cancelImport()">Cancelar Importacao</button>
     </div>
   `;
   openModal('Itens Duplicados Encontrados', body);
@@ -878,7 +873,6 @@ async function resolveDuplicates(action) {
   if (action === 'ignore') {
     itemsToImport = newItems;
   } else if (action === 'overwrite') {
-    // Encontrar os IDs dos registros antigos que serão substituídos
     const dupsToDelete = appData.cardCharges.filter(existing => {
       return duplicates.some(r =>
         existing.card_id === card.id && existing.invoice_period === invoicePeriod &&
@@ -886,14 +880,13 @@ async function resolveDuplicates(action) {
       );
     }).map(d => d.id);
 
-    // Filtrar para garantir que só UUIDs válidos sejam deletados
     const validIds = dupsToDelete.filter(id => typeof id === 'string' && id.length > 10 && id !== 'null' && id !== 'undefined');
     
     if (validIds.length > 0) {
       const { error: delError } = await sb.from('card_charges').delete().in('id', validIds);
       if (delError) return alert('Erro ao substituir: ' + delError.message);
     }
-    itemsToImport = allRows; // Importa tudo, pois os antigos foram apagados
+    itemsToImport = allRows;
   } else if (action === 'duplicate') {
     itemsToImport = allRows;
   }
@@ -933,7 +926,6 @@ async function executeImport(card, invoicePeriod, rows) {
   await loadAllData(); renderAll();
 }
 
-// ===== RESTO DAS FUNÇÕES (Card Detail, Transactions, Accounts, etc) =====
 function openCardDetailView(cardId) {
   currentDetailCardId = cardId;
   clearSelection();
@@ -995,6 +987,62 @@ function renderCardDetail() {
     const paidCount = items.filter(i=>i.paid).length;
     const pendingCount = items.length - paidCount;
     const pctLimit = card.limit ? (total/card.limit*100) : 0;
+    
+    // CABEÇALHO CONSOLIDADO - Resumo de todos os cartões neste período
+    const allChargesInPeriod = appData.cardCharges.filter(c => {
+      const cPeriod = c.invoice_period || c.invoice_month || 'sem-fatura';
+      return cPeriod === period;
+    });
+    
+    const byCard = {};
+    allChargesInPeriod.forEach(c => {
+      if (!byCard[c.card_id]) byCard[c.card_id] = {total: 0, paid: 0, pending: 0};
+      byCard[c.card_id].total += c.value;
+      if (c.paid) byCard[c.card_id].paid += c.value;
+      byCard[c.card_id].pending += c.value - (c.paid ? c.value : 0);
+    });
+    
+    let grandTotal = 0, grandPaid = 0, grandPending = 0;
+    Object.values(byCard).forEach(v => {
+      grandTotal += v.total;
+      grandPaid += v.paid;
+      grandPending += v.pending;
+    });
+    
+    // PRIMEIRO CAMPO: Lista de Cartões/Bancos
+    html += '<div class="panel" style="margin-bottom:20px">';
+    html += '<div class="panel-title" style="margin-bottom:16px"><i class="fas fa-credit-card" style="color:var(--primary);margin-right:8px"></i>Resumo por Cartao - Fatura ' + fmtMonthLong(period) + '</div>';
+    html += '<div style="display:grid;gap:12px">';
+    
+    appData.cards.forEach(c => {
+      const cardData = byCard[c.id] || {total: 0, paid: 0, pending: 0};
+      const isCurrentCard = c.id === card.id;
+      const borderColor = isCurrentCard ? 'var(--primary)' : (c.color || '#e2e8f0');
+      const bgColor = isCurrentCard ? '#f0f4ff' : 'var(--surface)';
+      
+      html += '<div style="padding:16px;border:2px solid ' + borderColor + ';border-radius:8px;background:' + bgColor + ';display:grid;grid-template-columns:auto 1fr auto auto;gap:16px;align-items:center">';
+      html += '<div style="display:flex;align-items:center;gap:8px">';
+      html += '<span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:' + (c.color || '#4f46e5') + '"></span>';
+      html += '<div><div style="font-weight:600">' + c.name + '</div><div style="font-size:11px;color:var(--muted)">' + c.brand + ' - ' + c.last_digits + '</div></div>';
+      html += '</div>';
+      html += '<div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Total Fatura</div><div style="font-weight:700;color:var(--primary);font-size:18px">' + fmt(cardData.total) + '</div></div>';
+      html += '<div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Total Pago</div><div style="font-weight:700;color:var(--success);font-size:18px">' + fmt(cardData.paid) + '</div></div>';
+      html += '<div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Falta Pagar</div><div style="font-weight:700;color:var(--warning);font-size:18px">' + fmt(cardData.pending) + '</div></div>';
+      html += '</div>';
+    });
+    
+    html += '</div></div>';
+    
+    // SEGUNDO CAMPO: Balanço Geral Consolidado
+    html += '<div class="panel" style="margin-bottom:24px;background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);color:white">';
+    html += '<div class="panel-title" style="margin-bottom:16px;color:white"><i class="fas fa-layer-group" style="margin-right:8px"></i>Balanco Geral Consolidado - Fatura ' + fmtMonthLong(period) + '</div>';
+    html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px">';
+    html += '<div style="padding:16px;background:rgba(255,255,255,0.15);border-radius:8px;text-align:center"><div style="font-size:12px;opacity:0.9;margin-bottom:4px">Total das Faturas</div><div style="font-size:24px;font-weight:700">' + fmt(grandTotal) + '</div><div style="font-size:11px;opacity:0.8;margin-top:4px">' + Object.keys(byCard).length + ' cartao(oes)</div></div>';
+    html += '<div style="padding:16px;background:rgba(16,185,129,0.3);border-radius:8px;text-align:center"><div style="font-size:12px;opacity:0.9;margin-bottom:4px">Total Pago</div><div style="font-size:24px;font-weight:700">' + fmt(grandPaid) + '</div><div style="font-size:11px;opacity:0.8;margin-top:4px">' + (grandTotal > 0 ? ((grandPaid/grandTotal)*100).toFixed(1) : 0) + '% do total</div></div>';
+    html += '<div style="padding:16px;background:rgba(245,158,11,0.3);border-radius:8px;text-align:center"><div style="font-size:12px;opacity:0.9;margin-bottom:4px">Falta Pagar</div><div style="font-size:24px;font-weight:700">' + fmt(grandPending) + '</div><div style="font-size:11px;opacity:0.8;margin-top:4px">' + pendingCount + ' itens pendentes</div></div>';
+    html += '</div></div>';
+    
+    // DETALHES DA FATURA ATUAL
     const catBreakdown = {};
     items.forEach(i => {
       const cat = appData.categories.find(c=>c.id===i.category_id);
@@ -1007,35 +1055,35 @@ function renderCardDetail() {
     });
 
     html += '<div class="invoice-section">'+
-      '<div class="invoice-header"><div><div class="invoice-title"><i class="fas fa-file-invoice" style="color:var(--primary);margin-right:8px"></i>Fatura '+fmtMonthLong(period)+'</div>'+
-      '<div class="invoice-subtitle">Vencimento dia '+card.due_day+' - '+items.length+' compras - '+paidCount+' pagas - '+pendingCount+' pendentes</div></div>'+
-      '<div style="text-align:right"><div style="font-size:12px;color:var(--muted)">Total da Fatura</div><div style="font-size:28px;font-weight:700;color:var(--primary)">'+fmt(total)+'</div></div></div>'+
+      '<div class="invoice-header"><div><div class="invoice-title"><i class="fas fa-file-invoice" style="color:var(--primary);margin-right:8px"></i>Detalhes - ' + card.name + ' - Fatura ' + fmtMonthLong(period) + '</div>'+
+      '<div class="invoice-subtitle">Vencimento dia ' + card.due_day + ' - ' + items.length + ' compras - ' + paidCount + ' pagas - ' + pendingCount + ' pendentes</div></div>'+
+      '<div style="text-align:right"><div style="font-size:12px;color:var(--muted)">Total desta Fatura</div><div style="font-size:28px;font-weight:700;color:var(--primary)">' + fmt(total) + '</div></div></div>'+
       '<div class="invoice-stats">'+
-        '<div class="invoice-stat total"><div class="label">Total da Fatura</div><div class="value">'+fmt(total)+'</div></div>'+
-        '<div class="invoice-stat paid"><div class="label"><i class="fas fa-check-circle"></i> Total Pago</div><div class="value">'+fmt(paid)+'</div></div>'+
-        '<div class="invoice-stat pending"><div class="label"><i class="fas fa-clock"></i> Falta Pagar</div><div class="value">'+fmt(pending)+'</div></div>'+
-        '<div class="invoice-stat limit"><div class="label"><i class="fas fa-percentage"></i> Limite</div><div class="value">'+pctLimit.toFixed(1)+'%</div><div class="progress-bar" style="margin-top:8px"><div class="progress-fill '+(pctLimit>80?'danger':pctLimit>50?'warning':'')+'" style="width:'+Math.min(pctLimit,100)+'%"></div></div></div>'+
+        '<div class="invoice-stat total"><div class="label">Total da Fatura</div><div class="value">' + fmt(total) + '</div></div>'+
+        '<div class="invoice-stat paid"><div class="label"><i class="fas fa-check-circle"></i> Total Pago</div><div class="value">' + fmt(paid) + '</div></div>'+
+        '<div class="invoice-stat pending"><div class="label"><i class="fas fa-clock"></i> Falta Pagar</div><div class="value">' + fmt(pending) + '</div></div>'+
+        '<div class="invoice-stat limit"><div class="label"><i class="fas fa-percentage"></i> Limite</div><div class="value">' + pctLimit.toFixed(1) + '%</div><div class="progress-bar" style="margin-top:8px"><div class="progress-fill ' + (pctLimit>80?'danger':pctLimit>50?'warning':'') + '" style="width:' + Math.min(pctLimit,100) + '%"></div></div></div>'+
       '</div>'+
       '<div class="category-breakdown"><div class="category-breakdown-title"><i class="fas fa-tags" style="color:var(--primary);margin-right:6px"></i>Total das Categorias (Nesta Fatura)</div>'+
       '<div style="display:grid;grid-template-columns:1fr auto auto auto;gap:16px;padding:8px 12px;font-size:11px;color:var(--muted);text-transform:uppercase;font-weight:600;border-bottom:1px solid var(--border)"><div>Categoria</div><div style="text-align:right">Total</div><div style="text-align:right">Pago</div><div style="text-align:right">Pendente</div></div>'+
       Object.entries(catBreakdown).sort((a,b)=>b[1].total-a[1].total).map(([name, data]) => 
-        '<div class="cat-row"><div class="cat-name"><span class="cat-dot" style="background:'+data.color+'"></span>'+name+'</div><div class="cat-total">'+fmt(data.total)+'</div><div class="cat-paid">'+fmt(data.paid)+'</div><div class="cat-pending">'+fmt(data.pending)+'</div></div>'
+        '<div class="cat-row"><div class="cat-name"><span class="cat-dot" style="background:' + data.color + '"></span>' + name + '</div><div class="cat-total">' + fmt(data.total) + '</div><div class="cat-paid">' + fmt(data.paid) + '</div><div class="cat-pending">' + fmt(data.pending) + '</div></div>'
       ).join('') + '</div>'+
-      '<div style="font-size:14px;font-weight:600;margin:20px 0 12px;color:var(--text)"><i class="fas fa-list" style="color:var(--primary);margin-right:6px"></i>Compras desta Fatura ('+items.length+')</div>'+
+      '<div style="font-size:14px;font-weight:600;margin:20px 0 12px;color:var(--text)"><i class="fas fa-list" style="color:var(--primary);margin-right:6px"></i>Compras desta Fatura (' + items.length + ')</div>'+
       '<div class="charge-list"><div class="charge-header">'+
         '<div style="text-align:center"><input type="checkbox" onchange="toggleSelectAll(this.checked, this)"></div>'+
         '<div>Data</div><div>Produto</div><div>Categoria</div><div style="text-align:right">Valor</div><div style="text-align:center">Status</div><div></div></div>'+
       items.sort((a,b)=>a.date.localeCompare(b.date)).map(i => {
         const cat = appData.categories.find(c=>c.id===i.category_id);
-        const catOpts = appData.categories.map(c=>'<option value="'+c.id+'" '+(c.id===i.category_id?'selected':'')+'>'+c.name+'</option>').join('');
+        const catOpts = appData.categories.map(c=>'<option value="' + c.id + '" ' + (c.id===i.category_id?'selected':'') + '>' + c.name + '</option>').join('');
         const isSelected = selectedChargeIds.has(i.id);
-        return '<div class="charge-item '+(i.paid?'paid':'')+' '+(isSelected?'selected':'')+'">'+
-          '<div style="text-align:center"><input type="checkbox" data-id="'+i.id+'" '+(isSelected?'checked':'')+' onchange="toggleSelectCharge(\''+i.id+'\')"></div>'+
-          '<div class="charge-date">'+fmtDate(i.date)+'</div><div class="charge-product">'+i.product+'</div>'+
-          '<div class="charge-category"><select onchange="updateChargeField(\''+i.id+'\',\'category_id\',this.value===\'null\'?null:this.value)"><option value="null">--</option>'+catOpts+'</select></div>'+
-          '<div class="charge-value">'+fmt(i.value)+'</div>'+
-          '<div style="text-align:center"><label class="paid-toggle"><input type="checkbox" '+(i.paid?'checked':'')+' onchange="updateChargeField(\''+i.id+'\',\'paid\',this.checked)"><span>'+(i.paid?'<i class="fas fa-check-circle" style="color:var(--success)"></i>':'<i class="fas fa-clock" style="color:var(--warning)"></i>')+'</span></label></div>'+
-          '<div style="text-align:right"><button class="btn btn-sm btn-danger" onclick="deleteChargeFromDetail(\''+i.id+'\')"><i class="fas fa-trash"></i></button></div></div>';
+        return '<div class="charge-item ' + (i.paid?'paid':'') + ' ' + (isSelected?'selected':'') + '">'+
+          '<div style="text-align:center"><input type="checkbox" data-id="' + i.id + '" ' + (isSelected?'checked':'') + ' onchange="toggleSelectCharge(\'' + i.id + '\')"></div>'+
+          '<div class="charge-date">' + fmtDate(i.date) + '</div><div class="charge-product">' + i.product + '</div>'+
+          '<div class="charge-category"><select onchange="updateChargeField(\'' + i.id + '\',\'category_id\',this.value===\'null\'?null:this.value)"><option value="null">--</option>' + catOpts + '</select></div>'+
+          '<div class="charge-value">' + fmt(i.value) + '</div>'+
+          '<div style="text-align:center"><label class="paid-toggle"><input type="checkbox" ' + (i.paid?'checked':'') + ' onchange="updateChargeField(\'' + i.id + '\',\'paid\',this.checked)"><span>' + (i.paid?'<i class="fas fa-check-circle" style="color:var(--success)"></i>':'<i class="fas fa-clock" style="color:var(--warning)"></i>') + '</span></label></div>'+
+          '<div style="text-align:right"><button class="btn btn-sm btn-danger" onclick="deleteChargeFromDetail(\'' + i.id + '\')"><i class="fas fa-trash"></i></button></div></div>';
       }).join('') + '</div></div>';
   });
   body.innerHTML = html;
