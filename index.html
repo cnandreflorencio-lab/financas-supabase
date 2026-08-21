@@ -101,6 +101,7 @@ tr:hover{background:#f8fafc}
 .alert-info{background:#dbeafe;color:#1e40af;border:1px solid #93c5fd}
 .alert-success{background:#d1fae5;color:#065f46;border:1px solid #6ee7b7}
 .alert-danger{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5}
+.alert-warning{background:#fef3c7;color:#92400e;border:1px solid #fcd34d}
 .invite-box{background:#f1f5f9;padding:16px;border-radius:8px;margin-top:16px;text-align:center}
 .invite-code{font-family:monospace;font-size:24px;font-weight:700;color:var(--primary);letter-spacing:4px;margin:8px 0}
 .loader{display:inline-block;width:16px;height:16px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite}
@@ -241,7 +242,6 @@ tr:hover{background:#f8fafc}
           <div class="card"><div class="card-label"><i class="fas fa-piggy-bank" style="color:var(--warning)"></i> Patrimonio total</div><div class="card-value" id="totalWealth">R$ 0,00</div><div class="card-sub">Contas + Investimentos</div></div>
         </div>
         
-        <!-- NOVO: Resumo das Contas na Visão Geral -->
         <div class="panel" id="dashboardAccountsPanel" style="margin-bottom:24px">
           <div class="panel-header"><div class="panel-title">Resumo das Contas Bancarias</div></div>
           <div id="dashboardAccountsList" class="cards-grid"></div>
@@ -324,7 +324,6 @@ tr:hover{background:#f8fafc}
   </div>
 </div>
 
-<!-- OVERLAYS -->
 <div class="card-detail-overlay" id="cardDetailOverlay">
   <div class="detail-header">
     <button class="back-btn" onclick="closeCardDetail()"><i class="fas fa-arrow-left"></i> Voltar</button>
@@ -371,6 +370,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let session = null, profile = null, familyData = null, familyId = null;
 let currentDetailCardId = null;
 let selectedChargeIds = new Set();
+let pendingImportConfig = null;
 let appData = {transactions:[],accounts:[],cards:[],cardCharges:[],investments:[],categories:[],members:[]};
 let chartMonthly, chartCategories;
 
@@ -541,16 +541,13 @@ function toggleSidebar(){document.getElementById('sidebar').classList.toggle('op
 function openModal(title,body){document.getElementById('modalTitle').textContent=title;document.getElementById('modalBody').innerHTML=body;document.getElementById('modal').classList.add('active');}
 function closeModal(){document.getElementById('modal').classList.remove('active');}
 
-// ===== CONSOLIDATED VIEW LOGIC =====
+// ===== CONSOLIDATED VIEW =====
 function openConsolidatedView() {
   document.getElementById('consolidatedOverlay').classList.add('active');
   renderConsolidatedSelector();
   updateConsolidatedResults();
 }
-
-function closeConsolidatedView() {
-  document.getElementById('consolidatedOverlay').classList.remove('active');
-}
+function closeConsolidatedView() { document.getElementById('consolidatedOverlay').classList.remove('active'); }
 
 function renderConsolidatedSelector() {
   const container = document.getElementById('consolidatedCardSelector');
@@ -575,20 +572,15 @@ function renderConsolidatedSelector() {
 function updateConsolidatedResults() {
   const selectedIds = Array.from(document.querySelectorAll('.consolidated-card-check:checked')).map(cb => cb.value);
   const container = document.getElementById('consolidatedResults');
-  
   if(selectedIds.length === 0) {
     container.innerHTML = '<div class="alert alert-info"><i class="fas fa-info-circle"></i> Selecione pelo menos um cartao para ver o resumo.</div>';
     return;
   }
-
   const filteredCharges = appData.cardCharges.filter(c => selectedIds.includes(c.card_id));
-  
-  // Totais Gerais
   const totalSum = filteredCharges.reduce((s, c) => s + c.value, 0);
   const totalPaid = filteredCharges.filter(c => c.paid).reduce((s, c) => s + c.value, 0);
   const totalPending = totalSum - totalPaid;
 
-  // Agrupamento por Categoria
   const catBreakdown = {};
   filteredCharges.forEach(c => {
     const cat = appData.categories.find(x => x.id === c.category_id);
@@ -601,7 +593,6 @@ function updateConsolidatedResults() {
   });
 
   const sortedCats = Object.entries(catBreakdown).sort((a, b) => b[1].total - a[1].total);
-
   container.innerHTML = `
     <div class="invoice-section">
       <div class="invoice-header">
@@ -618,7 +609,6 @@ function updateConsolidatedResults() {
         <div class="invoice-stat paid"><div class="label"><i class="fas fa-check-circle"></i> Total Pago</div><div class="value">${fmt(totalPaid)}</div></div>
         <div class="invoice-stat pending"><div class="label"><i class="fas fa-clock"></i> Falta Pagar</div><div class="value">${fmt(totalPending)}</div></div>
       </div>
-
       <div class="category-breakdown">
         <div class="category-breakdown-title"><i class="fas fa-tags" style="color:var(--primary);margin-right:6px"></i>Total de Gastos por Categoria (Soma de todos os cartoes)</div>
         <div style="display:grid;grid-template-columns:1fr auto auto auto;gap:16px;padding:8px 12px;font-size:11px;color:var(--muted);text-transform:uppercase;font-weight:600;border-bottom:1px solid var(--border)">
@@ -638,7 +628,7 @@ function updateConsolidatedResults() {
   `;
 }
 
-// ===== BULK ACTIONS =====
+// ===== BULK ACTIONS (COM CORRECAO DE UUID NULL) =====
 function toggleSelectCharge(id) {
   if (selectedChargeIds.has(id)) selectedChargeIds.delete(id);
   else selectedChargeIds.add(id);
@@ -687,21 +677,29 @@ function clearSelection() {
 }
 
 async function bulkMarkAsPaid() {
-  if (!confirm('Marcar ' + selectedChargeIds.size + ' itens como pagos?')) return;
-  const ids = Array.from(selectedChargeIds);
-  const { error } = await sb.from('card_charges').update({ paid: true, paid_date: new Date().toISOString().slice(0,10) }).in('id', ids);
+  const validIds = Array.from(selectedChargeIds).filter(id => typeof id === 'string' && id.length > 10 && id !== 'null' && id !== 'undefined');
+  if (validIds.length === 0) { clearSelection(); return alert('Nenhum item válido selecionado.'); }
+  if (!confirm('Marcar ' + validIds.length + ' itens como pagos?')) return;
+  
+  const { error } = await sb.from('card_charges').update({ paid: true, paid_date: new Date().toISOString().slice(0,10) }).in('id', validIds);
   if (error) return alert('Erro: ' + error.message);
   clearSelection();
-  await loadAllData();
-  renderCardDetail();
-  renderCards();
+  await loadAllData(); renderCardDetail(); renderCards();
 }
 
 async function bulkDelete() {
-  if (!confirm('Excluir ' + selectedChargeIds.size + ' itens permanentemente?')) return;
-  const ids = Array.from(selectedChargeIds);
-  const { error } = await sb.from('card_charges').delete().in('id', ids);
+  // FILTRO CRITICO: Remove qualquer valor que não seja um UUID válido (evita o erro "null")
+  const validIds = Array.from(selectedChargeIds).filter(id => typeof id === 'string' && id.length > 10 && id !== 'null' && id !== 'undefined');
+  
+  if (validIds.length === 0) {
+    clearSelection();
+    return alert('Nenhum item válido selecionado para exclusão.');
+  }
+  if (!confirm('Excluir ' + validIds.length + ' itens permanentemente?')) return;
+
+  const { error } = await sb.from('card_charges').delete().in('id', validIds);
   if (error) return alert('Erro: ' + error.message);
+  
   clearSelection();
   await loadAllData();
   renderCardDetail();
@@ -709,19 +707,23 @@ async function bulkDelete() {
 }
 
 function showBulkCategoryModal() {
+  const validIds = Array.from(selectedChargeIds).filter(id => typeof id === 'string' && id.length > 10 && id !== 'null' && id !== 'undefined');
+  if (validIds.length === 0) { clearSelection(); return alert('Nenhum item válido selecionado.'); }
+  
   const catOpts = appData.categories.map(c => '<option value="'+c.id+'">'+c.name+'</option>').join('');
   openModal('Alterar Categoria em Lote', 
-    '<p style="margin-bottom:16px;color:var(--muted)">Selecione a nova categoria para <strong>'+selectedChargeIds.size+'</strong> itens:</p>'+
+    '<p style="margin-bottom:16px;color:var(--muted)">Selecione a nova categoria para <strong>'+validIds.length+'</strong> itens:</p>'+
     '<div class="form-group"><label>Categoria</label><select class="form-control" id="bulkCategorySelect"><option value="null">Sem categoria</option>'+catOpts+'</select></div>'+
     '<button class="btn btn-primary" style="width:100%" onclick="executeBulkCategoryChange()">Aplicar</button>'
   );
 }
 
 async function executeBulkCategoryChange() {
+  const validIds = Array.from(selectedChargeIds).filter(id => typeof id === 'string' && id.length > 10 && id !== 'null' && id !== 'undefined');
   const newCatId = document.getElementById('bulkCategorySelect').value;
   const finalCatId = newCatId === 'null' ? null : newCatId;
-  const ids = Array.from(selectedChargeIds);
-  const { error } = await sb.from('card_charges').update({ category_id: finalCatId }).in('id', ids);
+  
+  const { error } = await sb.from('card_charges').update({ category_id: finalCatId }).in('id', validIds);
   if (error) return alert('Erro: ' + error.message);
   closeModal();
   clearSelection();
@@ -729,6 +731,7 @@ async function executeBulkCategoryChange() {
   renderCardDetail();
 }
 
+// ===== CSV IMPORT COM DETECCAO DE DUPLICATAS =====
 async function importCSV(e, target) {
   const file = e.target.files[0];
   if (!file) return;
@@ -800,35 +803,137 @@ function openCardAndInvoiceSelectionModal() {
   openModal('Importar CSV - Escolha o Cartao e a Fatura', 
     '<div class="alert alert-info" style="margin-bottom:16px"><i class="fas fa-info-circle"></i> '+window._pendingCardRows.length+' registros encontrados.</div>'+
     cardsHtml+
-    '<button class="btn btn-secondary" style="width:100%;margin-top:10px" onclick="cancelCardImport()"><i class="fas fa-times"></i> Cancelar</button>'
+    '<button class="btn btn-secondary" style="width:100%;margin-top:10px" onclick="cancelImport()"><i class="fas fa-times"></i> Cancelar</button>'
   );
 }
 
 async function selectCardAndInvoice(cardId) {
-  const card = appData.cards.find(c=>c.id===cardId);
+  const card = appData.cards.find(c => c.id === cardId);
   if (!card) return alert('Cartao nao encontrado');
-  const invoicePeriod = document.getElementById('invoice-select-'+cardId).value;
+  const invoicePeriod = document.getElementById('invoice-select-' + cardId).value;
   const rows = window._pendingCardRows;
+
+  // 1. Separar novos e duplicatas
+  const newItems = [];
+  const duplicates = [];
+
+  rows.forEach(r => {
+    const isDuplicate = appData.cardCharges.some(existing =>
+      existing.card_id === cardId &&
+      existing.invoice_period === invoicePeriod &&
+      existing.date === r.date &&
+      existing.product.toLowerCase().trim() === r.product.toLowerCase().trim() &&
+      existing.value === r.value
+    );
+    if (isDuplicate) duplicates.push(r);
+    else newItems.push(r);
+  });
+
+  closeModal();
+
+  if (duplicates.length > 0) {
+    showDuplicateResolutionModal(card, invoicePeriod, newItems, duplicates, rows);
+  } else {
+    await executeImport(card, invoicePeriod, newItems);
+  }
+}
+
+function showDuplicateResolutionModal(card, invoicePeriod, newItems, duplicates, allRows) {
+  pendingImportConfig = { card, invoicePeriod, newItems, duplicates, allRows };
+  
+  const dupListHtml = duplicates.slice(0, 5).map(d =>
+    `<div style="font-size:13px;margin-bottom:4px;color:var(--muted)">• ${fmtDate(d.date)} | ${d.product} | ${fmt(d.value)}</div>`
+  ).join('') + (duplicates.length > 5 ? `<div style="font-size:12px;color:var(--muted)">... e mais ${duplicates.length - 5} itens</div>` : '');
+
+  const body = `
+    <div class="alert alert-warning" style="margin-bottom:16px">
+      <i class="fas fa-exclamation-triangle"></i> <strong>${duplicates.length} item(ns) duplicado(s)</strong> encontrado(s) nesta fatura (mesma data, produto e valor).
+    </div>
+    <div style="margin-bottom:16px;max-height:150px;overflow-y:auto;padding:10px;background:#f8fafc;border-radius:8px;border:1px solid var(--border)">
+      ${dupListHtml}
+    </div>
+    <p style="font-size:14px;margin-bottom:16px">Os <strong>${newItems.length}</strong> itens novos serão importados de qualquer forma. Como deseja proceder com as duplicatas?</p>
+    <div style="display:grid;gap:8px">
+      <button class="btn btn-secondary" onclick="resolveDuplicates('ignore')">
+        <i class="fas fa-ban"></i> Ignorar Duplicatas (Recomendado)
+      </button>
+      <button class="btn btn-primary" onclick="resolveDuplicates('overwrite')">
+        <i class="fas fa-sync"></i> Substituir Duplicatas (Apaga o antigo, insere o novo)
+      </button>
+      <button class="btn btn-danger" onclick="resolveDuplicates('duplicate')">
+        <i class="fas fa-copy"></i> Importar Tudo (Gerar Duplicidade)
+      </button>
+      <button class="btn btn-sm" style="margin-top:8px;background:transparent;border:1px solid var(--border)" onclick="cancelImport()">Cancelar Importação</button>
+    </div>
+  `;
+  openModal('Itens Duplicados Encontrados', body);
+}
+
+async function resolveDuplicates(action) {
+  if (!pendingImportConfig) return;
+  closeModal();
+  const { card, invoicePeriod, newItems, duplicates, allRows } = pendingImportConfig;
+  let itemsToImport = [];
+
+  if (action === 'ignore') {
+    itemsToImport = newItems;
+  } else if (action === 'overwrite') {
+    // Encontrar os IDs dos registros antigos que serão substituídos
+    const dupsToDelete = appData.cardCharges.filter(existing => {
+      return duplicates.some(r =>
+        existing.card_id === card.id && existing.invoice_period === invoicePeriod &&
+        existing.date === r.date && existing.product.toLowerCase().trim() === r.product.toLowerCase().trim() && existing.value === r.value
+      );
+    }).map(d => d.id);
+
+    // Filtrar para garantir que só UUIDs válidos sejam deletados
+    const validIds = dupsToDelete.filter(id => typeof id === 'string' && id.length > 10 && id !== 'null' && id !== 'undefined');
+    
+    if (validIds.length > 0) {
+      const { error: delError } = await sb.from('card_charges').delete().in('id', validIds);
+      if (delError) return alert('Erro ao substituir: ' + delError.message);
+    }
+    itemsToImport = allRows; // Importa tudo, pois os antigos foram apagados
+  } else if (action === 'duplicate') {
+    itemsToImport = allRows;
+  }
+
+  await executeImport(card, invoicePeriod, itemsToImport);
+  pendingImportConfig = null;
+}
+
+function cancelImport() {
+  closeModal();
+  if (window._currentCsvInput) window._currentCsvInput.value = '';
+  window._pendingCardRows = null;
+  window._currentCsvInput = null;
+  pendingImportConfig = null;
+}
+
+async function executeImport(card, invoicePeriod, rows) {
+  if (rows.length === 0) {
+    alert('Nenhum item novo para importar.');
+    if (window._currentCsvInput) window._currentCsvInput.value = '';
+    window._pendingCardRows = null; window._currentCsvInput = null;
+    return;
+  }
+
   const payload = rows.map(r => ({
     card_id: card.id, family_id: familyId, date: r.date, product: r.product, value: r.value,
     invoice_period: invoicePeriod, invoice_month: invoicePeriod,
     category_id: suggestCategory(r.product), paid: false, paid_date: null
   }));
-  const {error} = await sb.from('card_charges').insert(payload);
-  closeModal();
-  if (error) return alert('Erro: '+error.message);
-  alert(rows.length+' compras importadas na fatura de '+fmtMonthLong(invoicePeriod)+'!');
-  if (window._currentCsvInput) window._currentCsvInput.value='';
+
+  const { error } = await sb.from('card_charges').insert(payload);
+  if (error) return alert('Erro ao importar: ' + error.message);
+
+  alert(`${rows.length} compras importadas com sucesso na fatura de ${fmtMonthLong(invoicePeriod)}!`);
+  if (window._currentCsvInput) window._currentCsvInput.value = '';
   window._pendingCardRows = null; window._currentCsvInput = null;
   await loadAllData(); renderAll();
 }
 
-function cancelCardImport() {
-  if (window._currentCsvInput) window._currentCsvInput.value='';
-  window._pendingCardRows = null; window._currentCsvInput = null;
-  closeModal();
-}
-
+// ===== RESTO DAS FUNÇÕES (Card Detail, Transactions, Accounts, etc) =====
 function openCardDetailView(cardId) {
   currentDetailCardId = cardId;
   clearSelection();
@@ -1315,7 +1420,6 @@ function renderDashboard(){
   const wealth = appData.accounts.reduce((s,a)=>s+a.balance,0)+appData.investments.reduce((s,i)=>s+i.amount,0);
   document.getElementById('totalWealth').textContent = fmt(wealth);
 
-  // Renderizar Contas na Visão Geral
   const accEl = document.getElementById('dashboardAccountsList');
   if(appData.accounts.length > 0) {
     document.getElementById('dashboardAccountsPanel').style.display = 'block';
